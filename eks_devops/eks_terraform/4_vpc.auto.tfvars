@@ -1,0 +1,26 @@
+# VPC Variables
+create_vpc                        = true
+vpc_name                          = "harsh_k8s_vpc"
+vpc_cidr_block                    = "10.0.0.0/16"
+vpc_availability_zones            = ["ap-south-1a", "ap-south-1b"]
+vpc_public_subnets                = ["10.0.1.0/24", "10.0.2.0/24"] # WEB
+vpc_private_subnets               = ["10.0.3.0/24", "10.0.4.0/24"] # APP
+vpc_database_subnets              = ["10.0.5.0/24", "10.0.6.0/24"] # DB
+vpc_enable_nat_gateway            = true
+vpc_single_nat_gateway            = true
+vpc_public_subnets_auto_assign_ip = true
+vpc_create_igw                    = true
+vpc_database_nat_gateway_route    = true  #Private DB
+vpc_database_igw_gateway_route    = false #Public DB
+db_name                           = "company"
+db_username                       = "root"
+db_port                           = "3306"
+eks-cluster-name                  = "harsh-cluster-k8s"
+eks-cluster-version               = "1.27"
+eks-managed-nodegroup-name        = "eks-ng-harsh"
+service_account_name_alb          = "aws-load-balancer-controller" 
+kubesystem_namespace              = "kube-system"                  
+alb_helm_chart_name               = "aws-load-balancer-controller" 
+alb_helm_chart_release_name       = "aws-load-balancer-controller" 
+my_ip_address                     = "0.0.0.0/0"            
+kubeconfig                        = "~/.kube/config"

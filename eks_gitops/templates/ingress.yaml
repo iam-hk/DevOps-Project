@@ -1,0 +1,48 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: "spring-microservice-ingress"
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/load-balancer-name: spring-alb-test
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}, {"HTTP":80}]'
+    alb.ingress.kubernetes.io/certificate-arn: {{ .Values.certificate.arn }}
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+  labels:
+    app: spring-microservice
+spec:
+  ingressClassName: alb
+  rules:
+    - host: hkdev.online
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: currency-exchange-service
+                port:
+                  number: 80
+          - path: /getAmount
+            pathType: Prefix
+            backend:
+              service:
+                name: first-service-eks-and-rds
+                port:
+                  number: 8080
+          - path: /getTotalCount
+            pathType: Prefix
+            backend:
+              service:
+                name: first-service-eks-and-rds
+                port:
+                  number: 8080                  
+          - path: /addExchangeRate
+            pathType: Prefix
+            backend:
+              service:
+                name: first-service-eks-and-rds
+                port:
+                  number: 8080
+                  

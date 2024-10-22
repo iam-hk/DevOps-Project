@@ -1,0 +1,24 @@
+pipeline {
+    agent any
+    
+    parameters {
+        string(name: 'REPO_URL', description: 'GitHub repository URL')
+        string(name: 'BRANCH_NAME', description: 'Branch name to build')
+    }
+    
+    stages {
+        stage('Code') {
+            steps {
+                script {
+                    checkout([$class: 'GitSCM', branches: [[name: "${params.BRANCH_NAME}"]], 
+                              doGenerateSubmoduleConfigurations: false, 
+                              extensions: [], 
+                              userRemoteConfigs: [[credentialsId: 'git', url: "${params.REPO_URL}"]]])
+                }
+                echo 'Code has been cloned successfully.'
+            }
+        }
+        
+        // Add more stages as needed...
+    }
+}

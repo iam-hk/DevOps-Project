@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: first-deployment-eks-and-rds
+  labels:
+    app: first-deployment-eks-and-rds
+spec:
+  selector:
+    matchLabels:
+      app: first-deployment-eks-and-rds
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: first-deployment-eks-and-rds
+    spec:
+      containers:
+      - name: first-deployment-eks-and-rds-container
+        image: adkharat/first_spring_boot_to_rds_1:36
+        env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://database-13.cb662k08an3m.ap-south-1.rds.amazonaws.com:3306/company?createDatabaseIfNotExist=true&characterEncoding=UTF-8&useUnicode=true&useSSL=false&allowPublicKeyRetrieval=true
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-username
+                  key: username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-root-password
+                  key: password
+            - name: FEIGN_CLIENT_NAME
+              value: second-service-eks-and-rds
+            - name: FEIGN_CLIENT_URL
+              value: http://second-service-eks-and-rds:8081                
+        ports:
+            - containerPort: 8080
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "150m"
+          limits:
+            memory: "200Mi"
+            cpu: "200m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: second-deployment-eks-and-rds
+  labels:
+    app: second-deployment-eks-and-rds
+spec:
+  selector:
+    matchLabels:
+      app: second-deployment-eks-and-rds
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: second-deployment-eks-and-rds
+    spec:
+      containers:
+      - name: second-deployment-eks-and-rds-container
+        image: adkharat/second_spring_boot_to_rds_1:36
+        env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://database-13.cb662k08an3m.ap-south-1.rds.amazonaws.com:3306/company?createDatabaseIfNotExist=true&characterEncoding=UTF-8&useUnicode=true&useSSL=false&allowPublicKeyRetrieval=true
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-username
+                  key: username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-root-password
+                  key: password
+        ports:
+            - containerPort: 8081
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "150m"
+          limits:
+            memory: "200Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: first-service-eks-and-rds
+  labels:
+    app: first-service-eks-and-rds
+spec:
+  type: ClusterIP
+  selector:
+    app: first-deployment-eks-and-rds
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: second-service-eks-and-rds
+  labels:
+    app: second-service-eks-and-rds
+spec:
+  type: ClusterIP
+  selector:
+    app: second-deployment-eks-and-rds
+  ports:
+    - port: 8081
+      targetPort: 8081

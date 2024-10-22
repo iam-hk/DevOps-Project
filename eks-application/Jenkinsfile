@@ -1,0 +1,147 @@
+pipeline {
+
+    agent any
+
+    environment {
+        EMAIL_TO = 'utkarsh.nigam@kickdrumtech.com'
+        EMAIL_CC = 'harsh.kachhawa@kickdrumtech.com'
+    }
+
+    tools {
+            // jdk 'jdk17'
+            gradle 'gradle8-7' //name of  gradle tool configured in Jenkins tool section
+    }
+
+    stages {
+        stage('Gradle version') {
+            steps {
+                sh 'pwd'
+                sh 'ls -la'
+                echo 'Gradle version is '
+                sh 'gradle --version'
+            }
+        }
+
+        stage('CleanWorkspace') {
+            steps {
+                cleanWs()
+                echo 'Workspace cleaned /var/lib/jenkins/workspace'
+            }
+        }
+
+        stage("Clone"){
+            steps{
+                checkout scm 
+                echo 'Code clone in Workspace /var/lib/jenkins/workspace'
+            }
+        }
+
+        stage("Gradle build"){
+            steps{
+                echo 'Generating the Gradle build in build/lib/ folder' //https://tomgregory.com/gradle/gradle-assemble-task-essentials/
+                sh "pwd"
+                dir('first_spring_boot_to_RDS') {
+                    sh "pwd"
+                    sh "./gradlew assemble"  //Make sure gradle is configured/installed in tool section of Jenkins
+                }
+                sh "pwd"
+                dir('second_spring_boot_to_RDS') {
+                    sh "pwd"
+                    sh "./gradlew assemble"  //Make sure gradle is configured/installed in tool section of Jenkins              
+                }
+                sh "pwd"
+            }
+        }
+
+
+        stage ('OWASP Dependency-Check Vulnerabilities') {
+            steps {
+                dependencyCheck additionalArguments: ''' 
+                    -o "./" 
+                    -s "./"
+                    -f "ALL" 
+                    --prettyPrint''', odcInstallation: 'DP-check'
+
+                dependencyCheckPublisher pattern: 'dependency-check-report.xml'
+            }
+        } 
+
+        stage("Docker Build"){
+            steps{
+                echo "started docker build image for tag ${env.BUILD_NUMBER}"
+                sh "sudo docker build --no-cache -t harshkachhawa/react-currency-exchange-app-fe:${env.BUILD_NUMBER} ./front-end-react-app"
+                sh "pwd"
+                sh "ls -la"
+                sh 'ls -la front-end-react-app'
+                sh "sudo docker build --no-cache -t harshkachhawa/first_spring_boot_to_rds_1:${env.BUILD_NUMBER} ./first_spring_boot_to_RDS"
+                sh "sudo docker build --no-cache -t harshkachhawa/second_spring_boot_to_rds_1:${env.BUILD_NUMBER} ./second_spring_boot_to_RDS"
+
+                echo "code build done on tag ${env.BUILD_NUMBER}"
+            }
+        }
+
+        stage("Image vulnerability"){
+            steps{
+                echo "Started : Checking Image vulnerability"
+                sh "trivy image harshkachhawa/react-currency-exchange-app-fe:${env.BUILD_NUMBER} > scanningfrontend.txt"
+                sh "trivy image harshkachhawa/first_spring_boot_to_rds_1:${env.BUILD_NUMBER} > scanningbackend_1.txt"
+                sh "trivy image harshkachhawa/second_spring_boot_to_rds_1:${env.BUILD_NUMBER} > scanningbackend_2.txt"
+                echo "Done : Checking Image vulnerability"
+            }
+        }
+      
+        stage("Docker Push"){
+            steps{
+                withCredentials([usernamePassword(credentialsId:"docker",passwordVariable:"dockerHubPass",usernameVariable:"dockerHubUser")]){
+                sh "sudo docker login -u ${env.dockerHubUser} -p ${env.dockerHubPass}"
+                sh "sudo docker push harshkachhawa/react-currency-exchange-app-fe:${env.BUILD_NUMBER}"
+                sh "sudo docker push harshkachhawa/first_spring_boot_to_rds_1:${env.BUILD_NUMBER}"
+                sh "sudo docker push harshkachhawa/second_spring_boot_to_rds_1:${env.BUILD_NUMBER}"
+                echo 'image pushed'
+                }
+            }
+        }
+
+        stage("Docker Clean up"){
+            steps{
+                echo 'Clean up started'
+                sh "sudo docker rmi harshkachhawa/react-currency-exchange-app-fe:${env.BUILD_NUMBER}"
+                sh "sudo docker rmi harshkachhawa/first_spring_boot_to_rds_1:${env.BUILD_NUMBER}"
+                sh "sudo docker rmi harshkachhawa/second_spring_boot_to_rds_1:${env.BUILD_NUMBER}"
+                echo 'Cleanup Done'
+            }
+        }
+
+        stage('Trigger ManifestUpdate - GitOps') {
+            steps {
+                    echo "Triggering updatemanifestjob"
+                    build job: 'updatemanifest', parameters: [string(name: 'DOCKERTAG', value: env.BUILD_NUMBER)]
+            }
+        }
+    }
+    post {
+        //To use advance emailext, make sure to enable Extended E-mail Notification from /manage/configure
+
+        failure {
+    emailext to: "${EMAIL_TO},${EMAIL_CC}", 
+        attachmentsPattern: "scanningfrontend.txt, scanningbackend_1.txt, scanningbackend_2.txt",
+        subject: "KDU-DevOps Assignment (Harsh): FAILED - ${env.JOB_NAME}", 
+        body: "Build failed ${env.JOB_NAME} build no: ${env.BUILD_NUMBER}.\n\nView the log at:\n ${env.BUILD_URL}\n\nBlue Ocean:\n${env.RUN_DISPLAY_URL}"
+}
+
+success {
+    emailext to: "${EMAIL_TO},${EMAIL_CC}", //https://www.jenkins.io/doc/pipeline/steps/email-ext/
+        attachmentsPattern: "scanningfrontend.txt, scanningbackend_1.txt, scanningbackend_2.txt",
+        body: "Build Successful ${env.JOB_NAME} build no: ${env.BUILD_NUMBER}\n\nView the log at:\n ${env.BUILD_URL}\n\nBlue Ocean:\n${env.RUN_DISPLAY_URL}",
+        subject: "KDU-DevOps Assignment (Harsh): SUCCESSFUL - ${env.JOB_NAME}"
+}
+
+aborted {
+    emailext to: "${EMAIL_TO},${EMAIL_CC}", 
+        attachmentsPattern: "scanningfrontend.txt, scanningbackend_1.txt, scanningbackend_2.txt",
+        subject: "KDU-DevOps Assignment (Harsh): ABORTED - ${env.JOB_NAME}", 
+        body: "Build was aborted ${env.JOB_NAME} build no: ${env.BUILD_NUMBER}\n\nView the log at:\n ${env.BUILD_URL}\n\nBlue Ocean:\n${env.RUN_DISPLAY_URL}"
+}
+
+    }
+}

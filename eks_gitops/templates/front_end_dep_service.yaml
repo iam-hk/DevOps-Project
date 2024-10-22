@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: currency-exchange-apps
+  labels:
+    app: currency-exchange-apps
+spec:
+  selector:
+    matchLabels:
+      app: currency-exchange-apps
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: currency-exchange-apps
+    spec:
+      containers:
+      - name: currency-exchange-container
+        image: harshkachhawa/react-currency-exchange-app-fe:11
+        env:
+            - name: REACT_APP_PUBLIC_URL
+              value: https://hkdev.online
+        ports:
+            - containerPort: 80
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "150m"
+          limits:
+            memory: "200Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: currency-exchange-service
+  labels:
+    app: currency-exchange-apps
+spec:
+  type: ClusterIP
+  selector:
+    app: currency-exchange-apps
+  ports:
+    - port: 80
+      targetPort: 80

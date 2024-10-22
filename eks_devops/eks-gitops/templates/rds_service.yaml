@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: spring-mysql
+spec:
+  type: ExternalName
+  externalName: database-13.cb662k08an3m.ap-south-1.rds.amazonaws.com 

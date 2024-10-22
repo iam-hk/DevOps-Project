@@ -1,0 +1,18 @@
+database:
+  rds_endpoint: database-13.cb662k08an3m.ap-south-1.rds.amazonaws.com
+  port: 3306
+  databaseName: company
+  base64_username: cm9vdA== 
+  base64_password: cXdlcnR5dWk=
+
+route53:
+  domain_name: hkdev.online
+  domain_name_https:  https://hkdev.online
+
+certificate:
+  arn: arn:aws:acm:ap-south-1:357186263723:certificate/f126cc53-99a8-4da0-bf19-c0e4129e80c0
+
+images:
+  frontend: harshkachhawa/react-currency-exchange-app-fe
+  backenf_1: harshkachhawa/first_spring_boot_to_rds_1
+  backend_2: harshkachhawa/second_spring_boot_to_rds_1
